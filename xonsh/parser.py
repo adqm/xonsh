@@ -2176,7 +2176,6 @@ class Parser(object):
     def p_subproc_special_atom(self, p):
         """subproc_special_atom : AND
                                 | OR
-                                | PIPE
         """
         p[0] = p[1]
 
@@ -2191,12 +2190,23 @@ class Parser(object):
             p1 = p[2]
         p[0] = ast.Str(s=p1, lineno=self.lineno, col_offset=self.col)
 
-    def p_subproc(self, p):
-        """subproc : subproc_atoms
-                   | subproc_atoms WS
-                   | subproc subproc_special subproc
-                   | LPAREN subproc RPAREN
-                   | subproc AMPERSAND
+    def p_subproc_pipe(self, p):
+        """subproc_pipe : PIPE
+                        | WS PIPE
+                        | PIPE WS
+                        | WS PIPE WS
+        """
+        p1 = p[1]
+        if len(p) > 2 and len(p1.strip()) == 0:
+            p1 = p[2]
+        p[0] = ast.Str(s=p1, lineno=self.lineno, col_offset=self.col)
+        
+
+    def p_subproc_andor(self, p):
+        """subproc_andor : subproc_atoms
+                         | subproc_atoms WS
+                         | subproc_andor subproc_special subproc_andor
+                         | LPAREN subproc_piece RPAREN
         """
         lineno = self.lineno
         col = self.col
@@ -2204,19 +2214,36 @@ class Parser(object):
         p1 = p[1]
         if lenp == 2:
             p0 = [ast.Tuple(elts=[ast.Str(s='cmd', lineno=lineno, col_offset=col), self._subproc_cliargs(p1, lineno=lineno, col=col)], lineno=lineno, col_offset=col, ctx=ast.Load())]
-        elif p[2] == '&':
-            p0 = p1 + [ast.Str(s=p[2], lineno=lineno, col_offset=col)]
         elif lenp == 3:
             p0 = [ast.Tuple(elts=[ast.Str(s='cmd', lineno=lineno, col_offset=col), self._subproc_cliargs(p1, lineno=lineno, col=col)], lineno=lineno, col_offset=col, ctx=ast.Load())]
         else:
             if p1 == '(':
                 p0 = p[2]
-            elif p[2].s == '|':
-                p0 = p1 + [p[2]] + p[3]
             else:
+                #p1 = ast.List(elts=p1, lineno=lineno, col_offset=col, ctx=ast.Load())
+                #p3 = ast.List(elts=p[3], lineno=lineno, col_offset=col, ctx=ast.Load())
                 p0 = [ast.Tuple(elts=[p[2], p1[0], p[3][0]], lineno=lineno, col_offset=col, ctx=ast.Load())]
         # return arguments list
         p[0] = p0
+
+    def p_subproc_piece(self, p):
+        """subproc_piece : subproc_andor
+                         | subproc_andor subproc_pipe subproc_andor
+        """
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            s = ast.Str(s='|', lineno=self.lineno, col_offset=self.col)
+            p[0] = p[1] + [s] + p[3]
+
+    def p_subproc(self, p):
+        """subproc : subproc_piece
+                   | subproc_piece AMPERSAND
+        """
+        p[0] = p[1]
+        if len(p) > 2 and p[2] == '&':
+            p[0] = p[1] + [ast.Str(s=p[2], lineno=self.lineno, col_offset=self.col)]
+
 
     def p_subproc_atoms(self, p):
         """subproc_atoms : subproc_atom
