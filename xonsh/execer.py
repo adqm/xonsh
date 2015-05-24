@@ -179,6 +179,7 @@ class Execer(object):
                     input = '\n'.join(lines)
                     continue
                 maxcol = self._find_next_break(line, last_error_col)
+                print('MAXCOL HERE',maxcol)
                 sbpline = subproc_toks(line,
                                        returnline=True,
                                        maxcol=maxcol,

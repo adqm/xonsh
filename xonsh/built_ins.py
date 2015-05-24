@@ -403,6 +403,7 @@ def run_subproc(cmds, captured=True):
     """
     global ENV
     background = False
+    print('RUNNING',cmds)
     if cmds[-1] == '&':
         background = True
         cmds = cmds[:-1]

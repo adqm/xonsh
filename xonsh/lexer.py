@@ -57,7 +57,9 @@ def handle_name(state, token, stream):
     """
     typ = 'NAME'
     state['last'] = token
-    if state['pymode'][-1][0]:
+    if token.string in frozenset({'and', 'or'}):
+        yield _new_token(token.string.upper(), token.string, token.start)
+    elif state['pymode'][-1][0]:
         if token.string in kwlist:
             typ = token.string.upper()
         yield _new_token(typ, token.string, token.start)
@@ -470,11 +472,13 @@ class Lexer(object):
 
     def input(self, s):
         """Calls the lexer on the string s."""
+        print('INP',repr(s))
         self.token_stream = get_tokens(s)
 
     def token(self):
         """Retrieves the next token."""
         self.last = next(self.token_stream, None)
+        print('TOK',self.last)
         return self.last
 
     def __iter__(self):

@@ -2173,11 +2173,18 @@ class Parser(object):
             del arg._cliarg_action
         return cliargs
 
-    def p_pipe(self, p):
-        """pipe : PIPE
-                | WS PIPE
-                | PIPE WS
-                | WS PIPE WS
+    def p_subproc_special_atom(self, p):
+        """subproc_special_atom : PIPE
+                                | AND
+                                | OR
+        """
+        p[0] = p[1]
+
+    def p_subproc_special(self, p):
+        """subproc_special : subproc_special_atom
+                           | WS subproc_special_atom
+                           | subproc_special_atom WS
+                           | WS subproc_special_atom WS
         """
         p1 = p[1]
         if len(p) > 2 and len(p1.strip()) == 0:
@@ -2187,9 +2194,9 @@ class Parser(object):
     def p_subproc(self, p):
         """subproc : subproc_atoms
                    | subproc_atoms WS
+                   | subproc subproc_special subproc
+                   | LPAREN subproc RPAREN
                    | subproc AMPERSAND
-                   | subproc pipe subproc_atoms
-                   | subproc pipe subproc_atoms WS
         """
         lineno = self.lineno
         col = self.col
@@ -2202,11 +2209,12 @@ class Parser(object):
         elif lenp == 3:
             p0 = [self._subproc_cliargs(p1, lineno=lineno, col=col)]
         else:
-            if len(p1) > 1 and hasattr(p1[-2], 's') and p1[-2].s != '|':
-                msg = 'additional redirect following non-pipe redirect'
-                self._parse_error(msg, self.currloc(lineno=lineno, column=col))
-            cliargs = self._subproc_cliargs(p[3], lineno=lineno, col=col)
-            p0 = p1 + [p[2], cliargs]
+            if p1 == '(':
+                f = [ast.Str(s='(', lineno=lineno, col_offset=col)]
+                s = [ast.Str(s=')', lineno=lineno, col_offset=col)]
+                p0 = f + p[2] + s
+            else:
+                p0 = p1 + [p[2]] + p[3]
         # return arguments list
         p[0] = p0
 
