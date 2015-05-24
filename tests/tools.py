@@ -6,7 +6,6 @@ import glob
 from contextlib import contextmanager
 
 from xonsh.built_ins import ensure_list_of_strs
-from xonsh.proc import get_proc
 
 def sp(cmd):
     cmd = cmd[1] # fine for simple subprocs

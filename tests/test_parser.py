@@ -1457,6 +1457,9 @@ def test_git_two_quotes_space_space():
 def test_ls_quotes_3_space():
     yield check_xonsh_ast, {}, '$[ls "wakka jawaka baraka"]', False
 
+def test_ls_simple_subproc_parens():
+    yield check_xonsh_ast, {}, '$[(ls "wakka jawaka baraka")]', False
+
 def test_comment_only():
     yield check_xonsh_ast, {}, '# hello'
 
@@ -1486,6 +1489,15 @@ def test_redirect():
             yield check_xonsh_ast, {}, '$[echo "test" {} {}> test.txt]'.format(r, o), False
             yield check_xonsh_ast, {}, '$[< input.txt echo "test" {} {}> test.txt]'.format(r, o), False
             yield check_xonsh_ast, {}, '$[echo "test" {} {}> test.txt < input.txt]'.format(r, o), False
+
+def test_subproc_parens():
+    e = {'PATH':['/usr/bin']}
+    for sep in {'and', 'or', '|'}:
+        yield check_xonsh_ast, e, '$[echo "hello" {} echo "huzzah"]'.format(sep), False
+        for sep2 in {'and', 'or', '|'}:
+            yield check_xonsh_ast, e, '$[echo "hello" {} echo "huzzah" {} echo @("hooray")]'.format(sep, sep2), False
+            yield check_xonsh_ast, e, '$[echo "hello" {} (echo "huzzah" {} echo @("hooray"))]'.format(sep, sep2), False
+            yield check_xonsh_ast, e, '$[(echo "hello" {} echo "huzzah") {} echo @("hooray")]'.format(sep, sep2), False
 
 #DEBUG_LEVEL = 1
 #DEBUG_LEVEL = 100
