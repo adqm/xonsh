@@ -215,13 +215,13 @@ def run_subproc(cmds, captured=True):
         cmds = cmds[:-1]
     write_target = None
     last_cmd = len(cmds)-1
-    prev = None
     procs = []
     prev_proc = None
     for ix, cmd in enumerate(cmds):
         proc = get_proc(cmd, prev_proc, ix==last_cmd, captured)
+        if proc is None:
+            continue
         procs.append(proc)
-        prev = None
         prev_proc = proc
     for proc in procs[:-1]:
         try:
