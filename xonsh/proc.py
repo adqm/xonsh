@@ -22,7 +22,7 @@ from subprocess import Popen, PIPE, DEVNULL, STDOUT
 from collections import Sequence
 
 from xonsh.tools import redirect_stdout, redirect_stderr, ON_WINDOWS,\
-                        ON_POSIX, XonshError, string_types
+                        ON_POSIX, XonshError, string_types, suggest_commands
 
 if ON_WINDOWS:
     import _winapi
