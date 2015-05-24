@@ -142,7 +142,6 @@ class CtxAwareTransformer(NodeTransformer):
         inscope = self.is_in_scope(body)
         if not inscope:
             node.body = self.try_subproc_toks(body)
-            node.body[0] = self.visit(node.body[0])
         return node
 
     def visit_Expr(self, node):
