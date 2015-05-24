@@ -109,6 +109,7 @@ else:
 
         _give_terminal_to(pgrp)  # give the terminal over to the fg process
         _, s = os.waitpid(obj.pid, os.WUNTRACED)
+        obj.returncode = s
         if os.WIFSTOPPED(s):
             obj.done = True
             job['bg'] = True

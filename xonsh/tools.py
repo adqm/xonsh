@@ -56,7 +56,7 @@ def subproc_toks(line, mincol=-1, maxcol=None, lexer=None, returnline=False):
     end_offset = 0
     for tok in lexer:
         pos = tok.lexpos
-        if tok.type != 'SEMI' and pos >= maxcol:
+        if tok.type != 'SEMI' and pos > maxcol:
             break
         if len(toks) == 0 and tok.type in ('WS', 'INDENT'):
             continue  # handle indentation

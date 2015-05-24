@@ -2174,9 +2174,9 @@ class Parser(object):
         return cliargs
 
     def p_subproc_special_atom(self, p):
-        """subproc_special_atom : PIPE
-                                | AND
+        """subproc_special_atom : AND
                                 | OR
+                                | PIPE
         """
         p[0] = p[1]
 
@@ -2203,18 +2203,18 @@ class Parser(object):
         lenp = len(p)
         p1 = p[1]
         if lenp == 2:
-            p0 = [self._subproc_cliargs(p1, lineno=lineno, col=col)]
+            p0 = [ast.Tuple(elts=[ast.Str(s='cmd', lineno=lineno, col_offset=col), self._subproc_cliargs(p1, lineno=lineno, col=col)], lineno=lineno, col_offset=col, ctx=ast.Load())]
         elif p[2] == '&':
             p0 = p1 + [ast.Str(s=p[2], lineno=lineno, col_offset=col)]
         elif lenp == 3:
-            p0 = [self._subproc_cliargs(p1, lineno=lineno, col=col)]
+            p0 = [ast.Tuple(elts=[ast.Str(s='cmd', lineno=lineno, col_offset=col), self._subproc_cliargs(p1, lineno=lineno, col=col)], lineno=lineno, col_offset=col, ctx=ast.Load())]
         else:
             if p1 == '(':
-                f = [ast.Str(s='(', lineno=lineno, col_offset=col)]
-                s = [ast.Str(s=')', lineno=lineno, col_offset=col)]
-                p0 = f + p[2] + s
-            else:
+                p0 = p[2]
+            elif p[2].s == '|':
                 p0 = p1 + [p[2]] + p[3]
+            else:
+                p0 = [ast.Tuple(elts=[p[2], p1[0], p[3][0]], lineno=lineno, col_offset=col, ctx=ast.Load())]
         # return arguments list
         p[0] = p0
 
