@@ -675,7 +675,7 @@ class AndProc(ProcProxy):
 
 
 class OrProc(ProcProxy):
-    def __init__(self, cmd1, cmd2, stdin, stdout, stderr, uninew, prev_proc):
+    def __init__(self, cmd1, cmd2, stdin, stdout, stderr, uninew, captured, prev_proc):
         self.cmd1 = cmd1
         self.cmd2 = cmd2
         self.captured = captured
