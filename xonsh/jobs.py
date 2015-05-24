@@ -109,7 +109,6 @@ else:
 
         _give_terminal_to(pgrp)  # give the terminal over to the fg process
         _, s = os.waitpid(obj.pid, os.WUNTRACED)
-        obj.returncode = s
         if os.WIFSTOPPED(s):
             obj.done = True
             job['bg'] = True
@@ -118,7 +117,9 @@ else:
             print_one_job(act)
         elif os.WIFSIGNALED(s):
             print()  # get a newline because ^C will have been printed
+            obj.returncode = s
         if obj.poll() is not None:
+            obj.returncode = s
             builtins.__xonsh_active_job__ = None
         _give_terminal_to(_shell_pgrp)  # give terminal back to the shell
 
@@ -144,6 +145,13 @@ def _reactivate_job():
                                         key=lambda x: x[1]['started'])[0]
 
 
+def _print_helper(c):
+    if c[0] == 'cmd':
+        return ' '.join(c[1])
+    else:
+        return '({}) {} ({})'.format(_print_helper(c[1]), c[0], _print_helper(c[2]))
+
+
 
 def print_one_job(num):
     """Print a line describing job number ``num``."""
@@ -153,7 +161,7 @@ def print_one_job(num):
         return
     act = '*' if num == builtins.__xonsh_active_job__ else ' '
     status = job['status']
-    cmd = [' '.join(i) if isinstance(i, list) else i for i in job['cmds']]
+    cmd = [_print_helper(i) if isinstance(i, tuple) else i for i in job['cmds']]
     cmd = ' '.join(cmd)
     pid = job['pids'][-1]
     bg = ' &' if job['bg'] else ''
