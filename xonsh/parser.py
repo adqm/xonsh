@@ -2220,8 +2220,6 @@ class Parser(object):
             if p1 == '(':
                 p0 = p[2]
             else:
-                #p1 = ast.List(elts=p1, lineno=lineno, col_offset=col, ctx=ast.Load())
-                #p3 = ast.List(elts=p[3], lineno=lineno, col_offset=col, ctx=ast.Load())
                 p0 = [ast.Tuple(elts=[p[2], p1[0], p[3][0]], lineno=lineno, col_offset=col, ctx=ast.Load())]
         # return arguments list
         p[0] = p0
@@ -2229,7 +2227,10 @@ class Parser(object):
     def p_subproc_piece(self, p):
         """subproc_piece : subproc_andor
                          | subproc_andor subproc_pipe subproc_andor
+                         | subproc_piece subproc_pipe subproc_piece
         """
+        if len(p) > 2:
+            print(p[2],p[3])
         if len(p) == 2:
             p[0] = p[1]
         else:
@@ -2240,9 +2241,10 @@ class Parser(object):
         """subproc : subproc_piece
                    | subproc_piece AMPERSAND
         """
-        p[0] = p[1]
         if len(p) > 2 and p[2] == '&':
             p[0] = p[1] + [ast.Str(s=p[2], lineno=self.lineno, col_offset=self.col)]
+        else:
+            p[0] = p[1]
 
 
     def p_subproc_atoms(self, p):
