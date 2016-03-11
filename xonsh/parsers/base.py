@@ -1729,11 +1729,11 @@ class BaseParser(object):
         p[0] = self._envvar_by_name(p[1][1:], lineno=self.lineno, col=self.col)
 
     def p_atom_fistful_of_dollars(self, p):
-        """atom : dollar_lbrace_tok test RBRACE
-                | dollar_lparen_tok subproc RPAREN
-                | bang_lparen_tok subproc RPAREN
-                | bang_lbracket_tok subproc RBRACKET
-                | dollar_lbracket_tok subproc RBRACKET
+        """atom : dollar_lbrace_tok test SUBPROC_END_RBRACE
+                | dollar_lparen_tok subproc SUBPROC_END_RPAREN
+                | bang_lparen_tok subproc SUBPROC_END_RPAREN
+                | bang_lbracket_tok subproc SUBPROC_END_RBRACKET
+                | dollar_lbracket_tok subproc SUBPROC_END_RBRACKET
         """
         p[0] = self._dollar_rules(p)
 
@@ -2151,7 +2151,7 @@ class BaseParser(object):
     # Subproc atom rules
     #
     def p_subproc_atom_uncaptured(self, p):
-        """subproc_atom : dollar_lbracket_tok subproc RBRACKET"""
+        """subproc_atom : dollar_lbracket_tok subproc SUBPROC_END_RBRACKET"""
 
         p1 = p[1]
         p0 = xonsh_call('__xonsh_subproc_uncaptured__', args=p[2],
@@ -2160,7 +2160,7 @@ class BaseParser(object):
         p[0] = p0
 
     def p_subproc_atom_captured_stdout(self, p):
-        """subproc_atom : dollar_lparen_tok subproc RPAREN"""
+        """subproc_atom : dollar_lparen_tok subproc SUBPROC_END_RPAREN"""
         p1 = p[1]
         p0 = xonsh_call('__xonsh_subproc_captured_stdout__', args=p[2],
                         lineno=p1.lineno, col=p1.lexpos)
@@ -2168,7 +2168,7 @@ class BaseParser(object):
         p[0] = p0
 
     def p_subproc_atom_captured_object(self, p):
-        """subproc_atom : bang_lparen_tok subproc RPAREN"""
+        """subproc_atom : bang_lparen_tok subproc SUBPROC_END_RPAREN"""
         p1 = p[1]
         p0 = xonsh_call('__xonsh_subproc_captured_object__', args=p[2],
                         lineno=p1.lineno, col=p1.lexpos)
@@ -2176,7 +2176,7 @@ class BaseParser(object):
         p[0] = p0
     
     def p_subproc_atom_captured_hiddenobject(self, p):
-        """subproc_atom : bang_lbracket_tok subproc RBRACKET"""
+        """subproc_atom : bang_lbracket_tok subproc SUBPROC_END_RBRACKET"""
         p1 = p[1]
         p0 = xonsh_call('__xonsh_subproc_captured_hiddenobject__', args=p[2],
                         lineno=p1.lineno, col=p1.lexpos)
@@ -2184,7 +2184,7 @@ class BaseParser(object):
         p[0] = p0
 
     def p_subproc_atom_pyenv_lookup(self, p):
-        """subproc_atom : dollar_lbrace_tok test RBRACE"""
+        """subproc_atom : dollar_lbrace_tok test SUBPROC_END_RBRACE"""
         p1 = p[1]
         lineno, col = p1.lineno, p1.lexpos
         xenv = self._xenv(lineno=lineno, col=col)
