@@ -256,12 +256,12 @@ def reglob(path, parts=None, i=None):
     if i1 == len(parts):
         for f in files:
             p = os.path.join(base, f)
-            if regex.match(p) is not None:
+            if regex.fullmatch(p) is not None:
                 paths.append(p)
     else:
         for f in files:
             p = os.path.join(base, f)
-            if regex.match(p) is None or not os.path.isdir(p):
+            if regex.fullmatch(p) is None or not os.path.isdir(p):
                 continue
             paths += reglob(p, parts=parts, i=i1)
     return paths
@@ -272,7 +272,8 @@ def regexpath(s):
     paths that match the regex.
     """
     s = expand_path(s)
-    return reglob(s)
+    o = reglob(s)
+    return o if len(o) != 0 else [s]
 
 
 def globpath(s, ignore_case=False):
@@ -568,9 +569,9 @@ def run_subproc(cmds, captured=False):
                     e = 'xonsh: subprocess mode: permission denied: {0}'
                     raise XonshError(e.format(cmd[0]))
         _stdin_file = None
-        if (captured == 'object' and
-                stdin is not None and
-                __xonsh_env__['XONSH_STORE_STDIN'] and
+        if (stdin is not None and
+                ENV.get('XONSH_STORE_STDIN') and
+                captured == 'object' and
                 'cat' in __xonsh_commands_cache__ and
                 'tee' in __xonsh_commands_cache__):
             _stdin_file = tempfile.NamedTemporaryFile()
@@ -673,6 +674,7 @@ def run_subproc(cmds, captured=False):
             procinfo['stderr'] = errout
 
     if (not prev_is_proxy and
+            hist.last_cmd_rtn is not None and
             hist.last_cmd_rtn > 0 and
             ENV.get('RAISE_SUBPROC_ERROR')):
         raise CalledProcessError(hist.last_cmd_rtn, aliased_cmd, output=output)
@@ -710,7 +712,7 @@ def subproc_captured_object(*cmds):
 def subproc_captured_hiddenobject(*cmds):
     """
     Runs a subprocess, capturing the output. Returns an instance of
-    ``COmpletedCOmmand`` representing the completed command.
+    ``HiddenCompletedCommand`` representing the completed command.
     """
     return run_subproc(cmds, captured='hiddenobject')
 
@@ -774,10 +776,9 @@ def load_builtins(execer=None, config=None):
     # would be nice to actually include non-detyped versions.
     builtins.__xonsh_history__ = History(env=ENV.detype(),
                                          ts=[time.time(), None], locked=True)
-    lastflush = _lastflush
-    atexit.register(lastflush)
+    atexit.register(_lastflush)
     for sig in AT_EXIT_SIGNALS:
-        resetting_signal_handle(sig, lastflush)
+        resetting_signal_handle(sig, _lastflush)
     BUILTINS_LOADED = True
 
 
