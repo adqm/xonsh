@@ -12,7 +12,10 @@ DIRSTACK = []
 """A list containing the currently remembered directories."""
 
 
-def _get_cwd():
+def _get_cwd(env):
+    if 'PWD' in env:
+        print('GOT ONE', env['PWD'])
+        return env['PWD']
     try:
         return os.getcwd()
     except (OSError, FileNotFoundError):

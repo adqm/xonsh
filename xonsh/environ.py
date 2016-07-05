@@ -1417,7 +1417,7 @@ def default_env(env=None, config=None, login=True):
     # in order of increasing precedence
     ctx = dict(BASE_ENV)
     ctx.update(os.environ)
-    ctx['PWD'] = _get_cwd() or ''
+    ctx['PWD'] = _get_cwd(ctx) or ''
     # other shells' PROMPT definitions generally don't work in XONSH:
     try:
         del ctx['PROMPT']
