@@ -546,6 +546,8 @@ def run_subproc(cmds, captured=False):
         pause_call_resume(prev_proc, builtins.__xonsh_shell__.settitle)
     if background:
         return
+    if not isinstance(prev_proc, SimpleProcProxy):
+        prev_proc.wait()
     wait_for_active_job()
     for proc in procs[:-1]:
         try:
