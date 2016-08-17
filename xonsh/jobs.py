@@ -232,7 +232,7 @@ def print_one_job(num, outfile=sys.stdout):
         return
     pos = '+' if tasks[0] == num else '-' if tasks[1] == num else ' '
     status = job['status']
-    cmd = [' '.join(i) if isinstance(i, list) else i for i in job['cmds']]
+    cmd = [' '.join(map(str, i)) if isinstance(i, list) else str(i) for i in job['cmds']]
     cmd = ' '.join(cmd)
     pid = job['pids'][-1]
     bg = ' &' if job['bg'] else ''

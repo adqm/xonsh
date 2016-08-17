@@ -27,7 +27,7 @@ from xonsh.foreign_shells import load_foreign_aliases
 from xonsh.jobs import add_job, wait_for_active_job
 from xonsh.platform import ON_POSIX, ON_WINDOWS
 from xonsh.proc import (
-    ProcProxy, SimpleProcProxy, ForegroundProcProxy,
+    ControllableProcProxy, SimpleProcProxy, ForegroundProcProxy,
     SimpleForegroundProcProxy, TeePTYProc, pause_call_resume, CompletedCommand,
     HiddenCompletedCommand)
 from xonsh.tools import (
@@ -474,9 +474,15 @@ def run_subproc(cmds, captured=False):
             bgable = getattr(aliased_cmd, '__xonsh_backgroundable__', True)
             numargs = len(inspect.signature(aliased_cmd).parameters)
             if numargs == 2:
-                cls = SimpleProcProxy if bgable else SimpleForegroundProcProxy
+                if bgable:
+                    cls = SimpleProcProxy
+                else:
+                    cls = SimpleForegroundProcProxy
             elif numargs == 4:
-                cls = ProcProxy if bgable else ForegroundProcProxy
+                if bgable:
+                    cls = ControllableProcProxy
+                else:
+                    cls = ForegroundProcProxy
             else:
                 e = 'Expected callable with 2 or 4 arguments, not {}'
                 raise XonshError(e.format(numargs))
@@ -525,7 +531,7 @@ def run_subproc(cmds, captured=False):
         prev_proc = proc
         if ON_POSIX and cls is subprocess.Popen and _pipeline_group is None:
             _pipeline_group = prev_proc.pid
-    if not prev_is_proxy:
+    if not isinstance(prev_proc, SimpleProcProxy):
         add_job({
             'cmds': cmds,
             'pids': [i.pid for i in procs],
@@ -540,8 +546,6 @@ def run_subproc(cmds, captured=False):
         pause_call_resume(prev_proc, builtins.__xonsh_shell__.settitle)
     if background:
         return
-    if prev_is_proxy:
-        prev_proc.wait()
     wait_for_active_job()
     for proc in procs[:-1]:
         try:

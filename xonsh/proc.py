@@ -19,6 +19,7 @@ import importlib
 import subprocess
 import collections
 import collections.abc as abc
+import multiprocessing
 
 from xonsh.platform import ON_WINDOWS, ON_LINUX, ON_POSIX
 from xonsh.tools import (redirect_stdout, redirect_stderr, fallback,
@@ -167,7 +168,9 @@ class ProcProxy(threading.Thread):
         """
         if self.f is None:
             return
-        if self.stdin is not None:
+        if isinstance(self.stdin, int):
+            sp_stdin = io.TextIOWrapper(io.open(self.stdin, 'rb', -1))
+        elif self.stdin is not None:
             sp_stdin = io.TextIOWrapper(self.stdin)
         else:
             sp_stdin = io.StringIO("")
@@ -340,6 +343,141 @@ class ProcProxy(threading.Thread):
             return (p2cread, p2cwrite,
                     c2pread, c2pwrite,
                     errread, errwrite)
+
+
+class ControllableProcProxy:
+    """
+    Class representing a function to be run as a subprocess-mode command.
+    """
+    def __init__(self, f, args,
+                 stdin=None,
+                 stdout=None,
+                 stderr=None,
+                 universal_newlines=False):
+        """Parameters
+        ----------
+        f : function
+            The function to be executed.
+        args : list
+            A (possibly empty) list containing the arguments that were given on
+            the command line
+        stdin : file-like, optional
+            A file-like object representing stdin (input can be read from
+            here).  If `stdin` is not provided or if it is explicitly set to
+            `None`, then an instance of `io.StringIO` representing an empty
+            file is used.
+        stdout : file-like, optional
+            A file-like object representing stdout (normal output can be
+            written here).  If `stdout` is not provided or if it is explicitly
+            set to `None`, then `sys.stdout` is used.
+        stderr : file-like, optional
+            A file-like object representing stderr (error output can be
+            written here).  If `stderr` is not provided or if it is explicitly
+            set to `None`, then `sys.stderr` is used.
+        """
+        self.f = f
+        """
+        The function to be executed.  It should be a function of four
+        arguments, described below.
+
+        Parameters
+        ----------
+        args : list
+            A (possibly empty) list containing the arguments that were given on
+            the command line
+        stdin : file-like
+            A file-like object representing stdin (input can be read from
+            here).
+        stdout : file-like
+            A file-like object representing stdout (normal output can be
+            written here).
+        stderr : file-like
+            A file-like object representing stderr (error output can be
+            written here).
+        """
+        self.args = args
+        self.pid = None
+        self.returncode = None
+
+        # these are my handles; need to make them "pass through" to the process
+        # we launch
+        handles = ProcProxy._get_handles(self, stdin, stdout, stderr)
+        (self.p2cread, self.p2cwrite,
+         self.c2pread, self.c2pwrite,
+         self.errread, self.errwrite) = handles
+
+        if stdin in {None, sys.stdin}:
+            self.p2cread = os.dup(sys.stdin.fileno())
+            os.set_inheritable(self.p2cread, True)
+        if stdout in {None, sys.stdout}:
+            self.c2pwrite = os.dup(sys.stdout.fileno())
+            os.set_inheritable(self.c2pwrite, True)
+        if stderr in {None, sys.stderr}:
+            self.errwrite = os.dup(sys.stderr.fileno())
+            os.set_inheritable(self.errwrite, True)
+
+        def wrapper(args, stdin, stdout, stderr, universal_newlines):
+            # try to close over f so that we don't have a problem with multiprocessing
+            signal.signal(signal.SIGTSTP, signal.SIG_DFL)
+            p = ProcProxy(f, args, stdin, stdout, stderr, universal_newlines)
+            while True:
+                self.returncode = p.poll()
+                if self.returncode is not None:
+                    break
+                time.sleep(0.01)
+            signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+            return p.returncode
+
+        _args = (args, self.p2cread, self.c2pwrite,
+                 self.errwrite, universal_newlines)
+        self.p = multiprocessing.Process(target=wrapper, args=_args)
+        self.p.start()
+        self.pid = self.p.pid
+        os.setpgid(self.pid, 0)
+
+        # default values
+        self.stdin = stdin
+        self.stdout = None
+        self.stderr = None
+
+        if ON_WINDOWS:
+            if self.p2cwrite != -1:
+                self.p2cwrite = msvcrt.open_osfhandle(self.p2cwrite.Detach(), 0)
+            if self.c2pread != -1:
+                self.c2pread = msvcrt.open_osfhandle(self.c2pread.Detach(), 0)
+            if self.errread != -1:
+                self.errread = msvcrt.open_osfhandle(self.errread.Detach(), 0)
+
+        if self.p2cwrite != -1:
+            self.stdin = io.open(self.p2cwrite, 'wb', -1)
+            if universal_newlines:
+                self.stdin = io.TextIOWrapper(self.stdin, write_through=True,
+                                              line_buffering=False)
+        if self.c2pread != -1:
+            self.stdout = io.open(self.c2pread, 'rb', -1)
+            if universal_newlines:
+                self.stdout = io.TextIOWrapper(self.stdout)
+
+        if self.errread != -1:
+            self.stderr = io.open(self.errread, 'rb', -1)
+            if universal_newlines:
+                self.stderr = io.TextIOWrapper(self.stderr)
+
+    def wait(self, timeout=None):
+        self.p.join(timeout=timeout)
+
+    def __getattr__(self, attr):
+        return getattr(self.p, attr)
+
+    def poll(self):
+        """Check if the function has completed.
+
+        Returns
+        -------
+        `None` if the function is still executing, `True` if the function
+        finished successfully, and `False` if there was an error.
+        """
+        return self.returncode
 
 
 def wrap_simple_command(f, args, stdin, stdout, stderr):
